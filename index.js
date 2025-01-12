@@ -69,6 +69,16 @@ async function run() {
       
       next()
     }
+    const VerifySeller=async(req, res, next)=>{
+      const email = req.user?.email
+      const query = {email}
+      const result = await userCollection.findOne(query)
+      if(!result || result?.role !== 'seller'){
+        return res.status(401).send({Massage:'Forbidden Access'})
+      }
+      
+      next()
+    }
 
 
 
@@ -77,7 +87,7 @@ async function run() {
     // users
     app.get("/users/:email",verifyToken,VerifyAdmin, async (req, res) => {
       const email = req.params.email
-      const query = {email: {$ne:email}} // admin nijer id ta jake update na korte pare tai manageUser theke tar id bad e sob id lode hocche
+      const query = {email: {$ne:email}} // ne mane 'not equal' admin nijer id ta jake update na korte pare tai manageUser theke tar id bad e sob id lode hocche
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
@@ -99,7 +109,7 @@ async function run() {
     })
     
     // ekhane admin dropdown er maddhome onno user er status onujai role update kore dicche
-    app.patch('/user/update/role/:email',verifyToken, async (req, res)=>{
+    app.patch('/user/update/role/:email',verifyToken,VerifyAdmin, async (req, res)=>{
       const email = req.params.email
       const {role, status} = req.body
       const filter = {email}
@@ -148,18 +158,23 @@ async function run() {
       const result = await plantsCollection.find().toArray()
       res.send(result)
     })
+    //kono seller nije kon kon plant er post korse ta find kore nitase Manage Inventory te nitase. file name MyInventory.jsx
+    app.get('/plants/:email',verifyToken,VerifySeller, async (req, res)=>{
+      const email = req.params.email
+      const result = await plantsCollection.find({'seller.email':email}).toArray()
+      res.send(result)
+    })
     app.get('/plants/:id', async(req, res)=>{
       const id = req.params.id
       const query = {_id: new ObjectId(id)}
       const result = await plantsCollection.findOne(query)
       res.send(result)
     })
-    app.post('/plants',verifyToken, async(req, res)=>{
+    app.post('/plants',verifyToken,VerifySeller, async(req, res)=>{
       const plant = req.body
       const result = await plantsCollection.insertOne(plant)
       res.send(result)
     })
-
 
     app.patch('/plants/quantity/:id', verifyToken, async(req, res)=>{
       const id =req.params.id
@@ -180,6 +195,17 @@ async function run() {
       const result = await plantsCollection.updateOne(filter, updatedDocs)
       res.send(result)
     })
+
+    app.delete('/plants/:id', verifyToken,VerifySeller, async(req, res)=>{
+      const id = req.params.id
+      const query = {_id: new ObjectId(id)}
+      const result = await plantsCollection.deleteOne(query)
+      res.send(result)
+    })
+
+
+
+
 
 
 
